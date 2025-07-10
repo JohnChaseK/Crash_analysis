@@ -305,7 +305,7 @@ Content-Type: application/json
     }
 
     // 文件大小验证
-    function validateFileSize(file, maxSizeMB = 100) {
+    function validateFileSize(file, maxSizeMB = 500) {
         const maxSize = maxSizeMB * 1024 * 1024; // 转换为字节
         if (file.size > maxSize) {
             alert(`文件 "${file.name}" 太大，请确保文件小于 ${maxSizeMB}MB`);

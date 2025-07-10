@@ -18,7 +18,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max file size
 
 # 配置上传文件夹
 UPLOAD_FOLDER = 'uploads'
@@ -65,12 +65,32 @@ def find_symbolicatecrash():
 def extract_dsym_from_zip(zip_path, extract_to):
     """从zip文件中提取dSYM文件"""
     dsym_paths = []
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        for file_info in zip_ref.infolist():
-            if file_info.filename.endswith('.dSYM/') or '.dSYM/' in file_info.filename:
-                zip_ref.extract(file_info, extract_to)
-                if file_info.filename.endswith('.dSYM/'):
-                    dsym_paths.append(os.path.join(extract_to, file_info.filename))
+    print(f"📦 开始解压dSYM文件: {os.path.basename(zip_path)}")
+    
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            # 获取ZIP文件信息
+            total_size = sum(info.file_size for info in zip_ref.infolist())
+            print(f"   ZIP文件大小: {total_size / (1024*1024):.1f}MB")
+            
+            extracted_count = 0
+            for file_info in zip_ref.infolist():
+                if file_info.filename.endswith('.dSYM/') or '.dSYM/' in file_info.filename:
+                    print(f"   正在解压: {file_info.filename}")
+                    zip_ref.extract(file_info, extract_to)
+                    extracted_count += 1
+                    if file_info.filename.endswith('.dSYM/'):
+                        dsym_paths.append(os.path.join(extract_to, file_info.filename))
+            
+            print(f"✅ 解压完成，提取了 {extracted_count} 个dSYM相关文件")
+            
+    except zipfile.BadZipFile:
+        print("❌ ZIP文件损坏或格式不正确")
+        raise Exception("ZIP文件损坏，请检查文件完整性")
+    except Exception as e:
+        print(f"❌ 解压失败: {str(e)}")
+        raise Exception(f"解压dSYM文件失败: {str(e)}")
+    
     return dsym_paths
 
 
@@ -457,11 +477,18 @@ def upload_files():
         dsym_paths = []
         temp_dir = tempfile.mkdtemp()
         
-        for dsym_file in dsym_files:
+        for i, dsym_file in enumerate(dsym_files):
             if dsym_file and dsym_file.filename and dsym_file.filename != '':
                 if allowed_file(dsym_file.filename):
                     dsym_filename = secure_filename(dsym_file.filename)
                     dsym_path = os.path.join(temp_dir, dsym_filename)
+                    
+                    # 检查文件大小
+                    file_size_mb = len(dsym_file.read()) / (1024 * 1024)
+                    dsym_file.seek(0)  # 重置文件指针
+                    print(f"📦 dSYM文件 {i+1}: {dsym_filename} ({file_size_mb:.1f}MB)")
+                    
+                    # 保存文件
                     dsym_file.save(dsym_path)
                     print(f"✅ dSYM文件已保存: {dsym_path}")
                     
@@ -538,7 +565,7 @@ def upload_files():
                 os.remove(ips_path)
     
     except RequestEntityTooLarge:
-        flash('文件太大，请确保文件小于100MB')
+        flash('文件太大，请确保文件小于500MB')
         return redirect(url_for('index'))
     except Exception as e:
         flash(f'处理文件时出错: {str(e)}')
@@ -583,7 +610,7 @@ def download_result(result_id):
 
 @app.errorhandler(413)
 def too_large(e):
-    flash('文件太大，请确保文件小于100MB')
+    flash('文件太大，请确保文件小于500MB')
     return redirect(url_for('index'))
 
 

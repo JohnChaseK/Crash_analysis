@@ -12,7 +12,7 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-change-in-production'
     
     # 文件上传配置
-    MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB
+    MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB
     UPLOAD_FOLDER = 'uploads'
     PROCESSED_FOLDER = 'processed'
     
