@@ -608,6 +608,13 @@ def download_result(result_id):
     return send_from_directory(app.config['PROCESSED_FOLDER'], filename, as_attachment=True)
 
 
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    """提供静态文件"""
+    static_folder = os.path.join(os.path.dirname(__file__), 'static')
+    return send_from_directory(static_folder, filename)
+
+
 @app.errorhandler(413)
 def too_large(e):
     flash('文件太大，请确保文件小于500MB')
